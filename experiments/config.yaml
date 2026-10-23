@@ -1,0 +1,106 @@
+dataset_metadata:
+  name: Synthetic NBA Tier-I Engineering Accreditation Dataset
+  is_synthetic: true
+  actions_file: data/synthetic_nba_actions.csv
+  total_actions: 45
+  total_criteria: 10
+  description: Synthetic multi-objective benchmark dataset for university NBA improvement
+    planning.
+planning_parameters:
+  budget_lakh: 30.0
+  planning_horizon_months: 12
+  monthly_faculty_capacity: 300.0
+  min_accreditation_score: 750.0
+criteria:
+- id: 1
+  code: C1
+  name: Vision, Mission and PEOs
+  max_score: 50.0
+  baseline_score: 30.0
+  min_threshold: 25.0
+- id: 2
+  code: C2
+  name: Program Curriculum and Teaching-Learning Processes
+  max_score: 100.0
+  baseline_score: 62.0
+  min_threshold: 55.0
+- id: 3
+  code: C3
+  name: Course Outcomes and Program Outcomes (CO-PO)
+  max_score: 175.0
+  baseline_score: 105.0
+  min_threshold: 95.0
+- id: 4
+  code: C4
+  name: Students' Performance
+  max_score: 100.0
+  baseline_score: 60.0
+  min_threshold: 55.0
+- id: 5
+  code: C5
+  name: Faculty Information and Contributions
+  max_score: 200.0
+  baseline_score: 125.0
+  min_threshold: 110.0
+- id: 6
+  code: C6
+  name: Facilities and Technical Support
+  max_score: 80.0
+  baseline_score: 52.0
+  min_threshold: 44.0
+- id: 7
+  code: C7
+  name: Continuous Improvement
+  max_score: 75.0
+  baseline_score: 42.0
+  min_threshold: 40.0
+- id: 8
+  code: C8
+  name: First Year Academics
+  max_score: 50.0
+  baseline_score: 32.0
+  min_threshold: 28.0
+- id: 9
+  code: C9
+  name: Student Support Systems
+  max_score: 50.0
+  baseline_score: 31.0
+  min_threshold: 28.0
+- id: 10
+  code: C10
+  name: Governance, Institutional Support and Financial Resources
+  max_score: 120.0
+  baseline_score: 76.0
+  min_threshold: 65.0
+algorithm_parameters:
+  random_seed: 42
+  population_size: 100
+  max_generations: 120
+  crossover_probability: 0.9
+  mutation_probability: 0.15
+  tournament_size: 2
+  archive_size: 100
+  moead_neighbors: 15
+  spea2_archive_size: 100
+  local_search_iterations: 20
+experiments:
+  seeds:
+  - 42
+  - 101
+  - 2024
+  - 777
+  - 999
+  algorithms:
+  - NSGA-II
+  - SPEA2
+  - MOEA/D
+  - Hybrid-Memetic
+  - Greedy-Baseline
+  - Random-Baseline
+  - MILP-HiGHS
+  metrics:
+  - hypervolume
+  - spacing
+  - spread
+  - coverage
+  - feasibility_rate

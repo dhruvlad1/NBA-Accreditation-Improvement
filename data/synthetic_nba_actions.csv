@@ -1,0 +1,46 @@
+action_id,crit_id,name,is_evidence,cost_lakh,faculty_hours,duration_months,prerequisites,max_units,score_gain
+ACT_01,1,SYNTHETIC E1: Stakeholder Consultation & PEO Review Dossier,True,0.4,45,2,,1,6.0
+ACT_02,1,SYNTHETIC: Alumni Survey Automation & Employer Feedback Cycle,False,0.6,30,2,ACT_01,2,4.5
+ACT_03,1,SYNTHETIC: Departmental Advisory Board (DAB) Governance Review,False,0.5,24,2,ACT_01,1,4.0
+ACT_04,1,SYNTHETIC: PEO Dissemination & Internal Stakeholder Workshops,False,0.3,20,1,ACT_01,2,3.0
+ACT_05,2,SYNTHETIC E2: Curriculum Benchmarking & Gap Audit Package,True,0.8,60,2,,1,8.0
+ACT_06,2,SYNTHETIC: Industry-Aligned Electives Development & Labs,False,1.5,75,3,ACT_05,2,7.0
+ACT_07,2,SYNTHETIC: ICT-Enabled Pedagogical Training for Faculty,False,0.9,40,2,ACT_05,2,5.0
+ACT_08,2,SYNTHETIC: Internship & Field Project Evaluation Framework,False,0.7,36,2,ACT_05,2,4.5
+ACT_09,2,SYNTHETIC: Digital Course Files & LMS Content Accreditation Audit,False,0.6,50,2,ACT_05,1,6.5
+ACT_10,3,SYNTHETIC E3: OBE Direct/Indirect Assessment Framework & Rubrics,True,1.0,80,3,,1,14.0
+ACT_11,3,SYNTHETIC: Automated CO-PO Attainment Computation Software,False,1.8,45,2,ACT_10,1,12.0
+ACT_12,3,SYNTHETIC: Bloom's Taxonomy Exam Question Paper Auditing,False,0.5,60,2,ACT_10,2,9.0
+ACT_13,3,SYNTHETIC: Capstone Project PO-Mapping & Rubric Standardisation,False,0.7,40,2,ACT_10,2,8.0
+ACT_14,3,SYNTHETIC: Remedial Diagnostic Assessment for Slow Learners,False,0.6,50,3,ACT_10,2,7.5
+ACT_15,4,SYNTHETIC E4: Student Graduation & Placement Verification Dossier,True,0.5,40,2,,1,8.0
+ACT_16,4,SYNTHETIC: Campus Placement Preparation & Mock Technical Interviews,False,1.4,70,3,ACT_15,2,9.0
+ACT_17,4,SYNTHETIC: GATE / Competitive Exam Coaching & Portal Access,False,1.0,35,3,ACT_15,2,6.5
+ACT_18,4,SYNTHETIC: Professional Societies Student Chapter Activities,False,0.8,30,2,ACT_15,2,5.0
+ACT_19,4,SYNTHETIC: Student Technical Symposium & Hackathon Sponsorship,False,1.2,40,2,ACT_15,1,6.0
+ACT_20,5,SYNTHETIC E5: Faculty Cadre Ratio & Qualification Verification Dossier,True,0.6,50,2,,1,12.0
+ACT_21,5,SYNTHETIC: Faculty Research Publication Incentives (SCI/Scopus),False,2.5,40,4,ACT_20,2,15.0
+ACT_22,5,SYNTHETIC: National/International Conference Travel Grants,False,1.5,20,3,ACT_20,2,9.0
+ACT_23,5,SYNTHETIC: Faculty Development Programs (FDP / NPTEL Certifications),False,1.0,45,2,ACT_20,2,10.0
+ACT_24,5,SYNTHETIC: Sponsored Research & Industry Consultancy Drive,False,2.0,60,3,ACT_20,1,14.0
+ACT_25,5,SYNTHETIC: Patent Filing & Intellectual Property Workshop,False,1.2,30,2,ACT_20,2,8.0
+ACT_26,6,SYNTHETIC E6: Lab Equipment Modernisation & Safety Audit Dossier,True,0.5,40,2,,1,6.0
+ACT_27,6,SYNTHETIC: Core Computing & Specialized Hardware Lab Upgrade,False,3.0,40,3,ACT_26,1,10.0
+ACT_28,6,SYNTHETIC: Engineering Software Licenses (MATLAB/EDA/Simulators),False,2.2,25,2,ACT_26,1,7.0
+ACT_29,6,SYNTHETIC: Lab Technical Staff Skill Enhancement Workshop,False,0.4,30,2,ACT_26,1,3.5
+ACT_30,6,SYNTHETIC: Project Laboratory & Prototyping Space Setup,False,1.8,50,3,ACT_26,1,6.5
+ACT_31,7,SYNTHETIC E7: Academic Audit & Continuous Improvement Cycle Dossier,True,0.4,35,2,,1,7.0
+ACT_32,7,SYNTHETIC: Closing the Loop PO/PSO Attainment Actions Plan,False,0.8,50,3,ACT_31,2,9.0
+ACT_33,7,SYNTHETIC: External Peer Review & Accreditation Mock Inspection,False,1.2,45,2,ACT_31;ACT_32,1,10.0
+ACT_34,7,SYNTHETIC: Longitudinal Multi-Year Expansion & Renovation Plan,False,4.0,70,8,ACT_31;ACT_33,1,8.0
+ACT_35,8,SYNTHETIC E8: First-Year Student-Faculty Ratio & Mentoring Dossier,True,0.3,30,2,,1,4.5
+ACT_36,8,SYNTHETIC: Bridge Courses in Mathematics & Programming,False,0.6,40,2,ACT_35,2,5.5
+ACT_37,8,SYNTHETIC: Basic Sciences Lab Modernisation & Safety Protocols,False,1.0,30,2,ACT_35,1,5.0
+ACT_38,8,SYNTHETIC: First-Year Induction Program (AICTE Guidelines),False,0.5,25,1,ACT_35,1,4.0
+ACT_39,9,SYNTHETIC E9: Mentoring & Grievance Redressal Mechanism Dossier,True,0.3,35,2,,1,5.0
+ACT_40,9,SYNTHETIC: Professional Career Counseling & Mental Health Support,False,0.8,30,2,ACT_39,2,6.5
+ACT_41,9,SYNTHETIC: Entrepreneurship Cell & Incubation Facility Grants,False,1.4,35,3,ACT_39,1,8.0
+ACT_42,10,"SYNTHETIC E10: Governance, Budget Allocation & Utilization Dossier",True,0.5,40,2,,1,10.0
+ACT_43,10,SYNTHETIC: Library Digital Subscriptions (IEEE/Springer) & Automation,False,2.0,20,2,ACT_42,1,12.0
+ACT_44,10,SYNTHETIC: ERP & Academic Management Information System Deployment,False,2.8,50,3,ACT_42,1,13.0
+ACT_45,10,"SYNTHETIC: Green Campus, Solar Energy & Waste Management Audit",False,1.2,25,2,ACT_42,1,9.0
