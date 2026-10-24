@@ -15,6 +15,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import yaml
+import logging
+import time
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -140,8 +145,30 @@ class NBAProblem:
         self._precompute_structures()
 
     def _load_criteria(self) -> None:
-        """Load 10 NBA criteria definitions from config."""
-        criteria_list = self.config["criteria"]
+        """Load criteria maxima and the synthetic programme profile from CSV."""
+        data_config = self.config["data"]
+        criteria_path = self.root_dir / data_config["criteria_file"]
+        profile_path = self.root_dir / data_config["profile_file"]
+        if not criteria_path.exists():
+            raise FileNotFoundError(f"Criteria CSV not found at {criteria_path}")
+        if not profile_path.exists():
+            raise FileNotFoundError(f"Profile CSV not found at {profile_path}")
+
+        criteria_df = pd.read_csv(criteria_path)
+        profile_df = pd.read_csv(profile_path, comment="#")
+        profile_by_id = profile_df.set_index("crit_id").to_dict("index")
+        criteria_list = []
+        for _, row in criteria_df.iterrows():
+            crit_id = int(row["crit_id"])
+            profile = profile_by_id[crit_id]
+            criteria_list.append({
+                "id": crit_id,
+                "code": str(row["code"]),
+                "name": str(row["name"]),
+                "max_score": float(row["max_marks"]),
+                "baseline_score": float(profile["current_marks"]),
+                "min_threshold": float(profile["min_level"]),
+            })
         self.num_criteria = len(criteria_list)
         self.criteria_raw = criteria_list
 
@@ -151,7 +178,7 @@ class NBAProblem:
 
     def _load_actions(self) -> None:
         """Load action data from CSV and resolve prerequisites and schedule."""
-        actions_rel_path = self.config["dataset_metadata"]["actions_file"]
+        actions_rel_path = self.config["data"]["actions_file"]
         actions_csv_path = self.root_dir / actions_rel_path
         if not actions_csv_path.exists():
             raise FileNotFoundError(f"Actions CSV not found at {actions_csv_path}")
@@ -197,7 +224,8 @@ class NBAProblem:
         for idx, row in df.iterrows():
             f_a = int(finish_times[idx])
             s_a = int(start_times[idx])
-            p_list = tuple(row["prerequisites"].split(";")) if (str(row["prerequisites"]) and str(row["prerequisites"]) != "nan") else ()
+            raw_prereqs = str(row["prerequisites"])
+            p_list = tuple(p.strip() for p in raw_prereqs.split(";") if p.strip() and p != "nan")
             p_indices = tuple(prereqs_by_idx[idx])
 
             action = Action(
@@ -205,19 +233,24 @@ class NBAProblem:
                 index=idx,
                 crit_id=int(row["crit_id"]),
                 name=str(row["name"]),
-                is_evidence=bool(row["is_evidence"]),
+                is_evidence=str(row["is_evidence"]).strip().lower() in {"true", "1", "yes"},
                 cost_lakh=float(row["cost_lakh"]),
                 faculty_hours=float(row["faculty_hours"]),
                 duration_months=int(row["duration_months"]),
                 prerequisites=p_list,
                 prereq_indices=p_indices,
                 max_units=int(row["max_units"]),
-                score_gain=float(row["score_gain"]),
+                score_gain=float(row["marks_per_unit"]),
                 earliest_start=s_a,
                 earliest_finish=f_a,
                 is_schedulable=(f_a <= self.planning_horizon),
             )
             self.actions.append(action)
+            if not action.is_schedulable:
+                logger.warning(
+                    "Action %s cannot finish before planning horizon T=%s (earliest finish=%s)",
+                    action.action_id, self.planning_horizon, action.earliest_finish,
+                )
 
         # Build Criterion objects
         self.criteria: List[Criterion] = []
@@ -266,11 +299,30 @@ class NBAProblem:
             for a_idx in c.action_indices:
                 self.criterion_action_mask[c_idx, a_idx] = self.gains[a_idx]
 
-        # Prerequisite pairs: list of (action_index, prereq_index, u_a)
-        self.prereq_pairs: List[Tuple[int, int, int]] = []
+        # Prerequisite pairs as parallel arrays for vectorised evaluation.
+        pair_rows: List[Tuple[int, int, int]] = []
         for a in self.actions:
             for p_idx in a.prereq_indices:
-                self.prereq_pairs.append((a.index, p_idx, a.max_units))
+                pair_rows.append((a.index, p_idx, a.max_units))
+        if pair_rows:
+            pair_array = np.asarray(pair_rows, dtype=np.int32)
+            self.prereq_pairs = (
+                pair_array[:, 0], pair_array[:, 1], pair_array[:, 2],
+            )
+        else:
+            empty = np.array([], dtype=np.int32)
+            self.prereq_pairs = (empty, empty, empty)
+
+        # dep[a, b] is true when b depends on a, directly or transitively.
+        self.dep = np.zeros((self.num_actions, self.num_actions), dtype=bool)
+        for action in self.actions:
+            pending = list(action.prereq_indices)
+            while pending:
+                prerequisite = pending.pop()
+                if self.dep[prerequisite, action.index]:
+                    continue
+                self.dep[prerequisite, action.index] = True
+                pending.extend(self.actions[prerequisite].prereq_indices)
 
     def evaluate(self, x: np.ndarray) -> EvaluationResult:
         """
@@ -314,11 +366,8 @@ class NBAProblem:
         deadline_viol = float(np.sum(unschedulable_units))
 
         # (4) Prerequisites: x_a <= u_a * x_b
-        prereq_viol = 0.0
-        for a_idx, b_idx, u_a in self.prereq_pairs:
-            diff = x[a_idx] - u_a * x[b_idx]
-            if diff > 0:
-                prereq_viol += float(diff)
+        a_idx, b_idx, u_a = self.prereq_pairs
+        prereq_viol = float(np.sum(np.maximum(0, x[a_idx] - u_a * x[b_idx])))
 
         # (5) Minimum criterion thresholds: Score_c >= L_c
         crit_viols = np.maximum(0.0, self.L - scores)
@@ -351,6 +400,13 @@ class NBAProblem:
             is_feasible=is_feasible,
         )
 
+    def structural_violation(self, x: np.ndarray) -> float:
+        """Return constraints 1-4 only (Proposal Sections 6.3-6.5)."""
+        result = self.evaluate(x)
+        return float(sum(result.violations[name] for name in (
+            "budget", "monthly_hours", "deadline", "prerequisites",
+        )))
+
     def evaluate_batch(self, X: np.ndarray) -> List[EvaluationResult]:
         """Evaluate a 2D array of solutions of shape (pop_size, num_actions)."""
         return [self.evaluate(sol) for sol in X]
@@ -358,18 +414,19 @@ class NBAProblem:
     def random_solution(self, rng: np.random.Generator, repair: bool = True) -> np.ndarray:
         """
         Generate a random solution within bounds, optionally repaired for feasibility.
-        Uses seeded numpy Generator.
+        Uses a random density so both sparse and dense plans are sampled (Proposal
+        Section 10).
         """
         x = np.zeros(self.num_actions, dtype=np.int32)
-        # Randomly choose units between 0 and u_a
+        density = float(rng.uniform(0.0, 1.0))
         for a in self.actions:
-            if a.is_schedulable:
-                x[a.index] = rng.integers(0, a.max_units + 1)
+            if a.is_schedulable and rng.random() < density:
+                x[a.index] = rng.integers(1, a.max_units + 1)
         if repair:
             x = self.repair(x, rng=rng)
         return x
 
-    def repair(self, x: np.ndarray, rng: Optional[np.random.Generator] = None) -> np.ndarray:
+    def _legacy_repair(self, x: np.ndarray, rng: Optional[np.random.Generator] = None) -> np.ndarray:
         """
         Domain-aware repair operator.
         Enforces:
@@ -504,5 +561,130 @@ class NBAProblem:
                 sol[best_action_idx] += 1
             else:
                 break
+
+        return sol
+
+    def repair(self, x: np.ndarray, rng: Optional[np.random.Generator] = None) -> np.ndarray:
+        """Repair constraints 1-4 exactly as specified in Proposal Section 10."""
+        sol = np.clip(np.array(x, dtype=np.int32), 0, self.upper_bounds)
+        sol[~self.schedulable_mask] = 0
+        for action_idx in np.flatnonzero(sol > 0):
+            prerequisites = np.flatnonzero(self.dep[:, action_idx])
+            sol[prerequisites] = np.maximum(sol[prerequisites], 1)
+        for action_idx in np.flatnonzero(~self.schedulable_mask):
+            sol[action_idx] = 0
+            sol[self.dep[action_idx]] = 0
+
+        hours_scale = self.monthly_capacity * self.planning_horizon
+        while (float(np.dot(self.costs, sol)) > self.budget or
+               np.any(self.schedule_matrix @ sol > self.monthly_capacity)):
+            candidates: List[Tuple[int, np.ndarray, float]] = []
+            for action_idx in np.flatnonzero(sol > 0):
+                if sol[action_idx] > 1:
+                    bundle = np.zeros(self.num_actions, dtype=bool)
+                    bundle[action_idx] = True
+                else:
+                    bundle = (self.dep[action_idx].copy() |
+                              (np.arange(self.num_actions) == action_idx))
+                    bundle &= sol > 0
+                units = sol[bundle].astype(np.float64)
+                resource = (np.sum(self.costs[bundle] * units) / self.budget +
+                            np.sum(self.hours[bundle] * units) / hours_scale)
+                marks = float(np.sum(self.gains[bundle] * units))
+                ratio = marks / resource if resource > 0.0 else 0.0
+                candidates.append((action_idx, bundle, ratio))
+            lowest = min(item[2] for item in candidates)
+            tied = [item for item in candidates
+                    if np.isclose(item[2], lowest, rtol=0.0, atol=1e-12)]
+            chosen = (min(tied, key=lambda item: item[0]) if rng is None
+                      else tied[int(rng.integers(0, len(tied)))])
+            sol[chosen[1]] = 0
+        return sol
+
+
+def print_diagnostics(problem: NBAProblem, seed: int = 0, sample_size: int = 2000) -> None:
+    """Print sampling and timing diagnostics requested in Proposal Section 10."""
+    rng = np.random.default_rng(seed)
+    raw = np.array([problem.random_solution(rng, repair=False) for _ in range(sample_size)])
+    raw_results = problem.evaluate_batch(raw)
+    repaired = np.array([problem.repair(vector) for vector in raw])
+    repaired_results = problem.evaluate_batch(repaired)
+    names = ("budget", "monthly_hours", "deadline", "prerequisites", "criteria_min", "target_score")
+
+    def percentage(results: List[EvaluationResult], name: str) -> float:
+        return 100.0 * sum(result.violations[name] > 1e-9 for result in results) / len(results)
+
+    print("diagnostic                         unrepaired    repaired")
+    for name in names:
+        print(f"{name:24s} {percentage(raw_results, name):10.2f}% {percentage(repaired_results, name):11.2f}%")
+    print(f"{'structurally feasible':24s} "
+          f"{100.0 * sum(problem.structural_violation(x) <= 1e-9 for x in raw) / sample_size:10.2f}% "
+          f"{100.0 * sum(problem.structural_violation(x) <= 1e-9 for x in repaired) / sample_size:11.2f}%")
+    print(f"{'fully feasible':24s} "
+          f"{100.0 * sum(result.is_feasible for result in raw_results) / sample_size:10.2f}% "
+          f"{100.0 * sum(result.is_feasible for result in repaired_results) / sample_size:11.2f}%")
+    changes = repaired.astype(np.int32) - raw
+    print(f"{'mean actions removed':24s} {'-':>10s} {float(np.maximum(-changes, 0).sum(axis=1).mean()):11.2f}")
+    print(f"{'mean actions added':24s} {'-':>10s} {float(np.maximum(changes, 0).sum(axis=1).mean()):11.2f}")
+
+    evaluate_calls = 10000
+    evaluate_start = time.perf_counter()
+    for index in range(evaluate_calls):
+        problem.evaluate(raw[index % len(raw)])
+    evaluate_seconds = time.perf_counter() - evaluate_start
+    repair_start = time.perf_counter()
+    repair_calls = 2000
+    for index in range(repair_calls):
+        problem.repair(raw[index % len(raw)])
+    repair_seconds = time.perf_counter() - repair_start
+    print(f"evaluate calls ({evaluate_calls}): {evaluate_seconds:.4f} s")
+    print(f"repair calls ({repair_calls}): {repair_seconds:.4f} s")
+
+    def repair(self, x: np.ndarray, rng: Optional[np.random.Generator] = None) -> np.ndarray:
+        """Repair constraints 1-4 exactly as specified in Proposal Section 10."""
+        sol = np.array(x, dtype=np.int32)
+        sol = np.clip(sol, 0, self.upper_bounds)
+        sol[~self.schedulable_mask] = 0
+
+        # Add one unit for every selected action's transitive prerequisite closure.
+        for action_idx in np.flatnonzero(sol > 0):
+            prerequisites = np.flatnonzero(self.dep[:, action_idx])
+            sol[prerequisites] = np.maximum(sol[prerequisites], 1)
+
+        # Remove unschedulable actions and all their transitive dependants.
+        for action_idx in np.flatnonzero(~self.schedulable_mask):
+            sol[action_idx] = 0
+            sol[self.dep[action_idx]] = 0
+
+        # Remove the lowest-value bundle until both resource constraints hold.
+        hours_scale = self.monthly_capacity * self.planning_horizon
+        while (float(np.dot(self.costs, sol)) > self.budget or
+               np.any(self.schedule_matrix @ sol > self.monthly_capacity)):
+            candidates: List[Tuple[int, np.ndarray, float]] = []
+            for action_idx in np.flatnonzero(sol > 0):
+                if sol[action_idx] > 1:
+                    bundle = np.zeros(self.num_actions, dtype=bool)
+                    bundle[action_idx] = True
+                else:
+                    bundle = self.dep[action_idx].copy()
+                    bundle[action_idx] = True
+                    bundle &= sol > 0
+                units = sol[bundle].astype(np.float64)
+                resource = float(
+                    np.sum(self.costs[bundle] * units) / self.budget
+                    + np.sum(self.hours[bundle] * units) / hours_scale
+                )
+                marks = float(np.sum(self.gains[bundle] * units))
+                ratio = marks / resource if resource > 0.0 else 0.0
+                candidates.append((action_idx, bundle, ratio))
+
+            lowest = min(item[2] for item in candidates)
+            tied = [item for item in candidates
+                    if np.isclose(item[2], lowest, rtol=0.0, atol=1e-12)]
+            if rng is None:
+                chosen = min(tied, key=lambda item: item[0])
+            else:
+                chosen = tied[int(rng.integers(0, len(tied)))]
+            sol[chosen[1]] = 0
 
         return sol

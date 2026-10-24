@@ -114,7 +114,8 @@ class HiGHSMILPSolver:
             rhs.append(float(self.problem.monthly_capacity))
 
         # 5. Prerequisites: x_a - u_a * x_b <= 0
-        for a_idx, b_idx, u_a in self.problem.prereq_pairs:
+        prereq_a, prereq_b, prereq_u = self.problem.prereq_pairs
+        for a_idx, b_idx, u_a in zip(prereq_a, prereq_b, prereq_u):
             row = np.zeros(self.total_vars, dtype=np.float64)
             row[a_idx] = 1.0
             row[b_idx] = -float(u_a)
