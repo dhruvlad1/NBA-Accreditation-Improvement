@@ -1,0 +1,14 @@
+dataset_metadata:
+  name: Synthetic NBA Tier-I Engineering Accreditation Small Instance
+  is_synthetic: true
+  total_actions: 20
+  total_criteria: 10
+planning_parameters:
+  budget_lakh: 30.0
+  planning_horizon_months: 12
+  monthly_faculty_capacity: 300.0
+  min_accreditation_score: 750.0
+data:
+  criteria_file: data/nba_criteria.csv
+  profile_file: data/profile.csv
+  actions_file: data/actions_small.csv
