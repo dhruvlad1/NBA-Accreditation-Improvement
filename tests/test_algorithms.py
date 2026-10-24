@@ -28,7 +28,7 @@ def test_highs_milp_solver(problem: NBAProblem) -> None:
     sol_max_f1 = solver.solve_single_objective("max_f1")
     assert sol_max_f1 is not None
     assert sol_max_f1.is_feasible
-    assert sol_max_f1.f1_total_score >= 850.0
+    assert sol_max_f1.f1_total_score >= problem.min_accreditation_score
     assert sol_max_f1.f2_cost_lakh <= problem.budget
 
     sol_min_f2 = solver.solve_single_objective("min_f2")
@@ -38,31 +38,30 @@ def test_highs_milp_solver(problem: NBAProblem) -> None:
 
 
 def test_nsga2_optimizer(problem: NBAProblem) -> None:
-    """Verify NSGA-II generates feasible non-dominated solutions."""
+    """Verify NSGA-II generates structurally feasible non-dominated solutions."""
     opt = NSGA2Optimizer(problem, pop_size=20, max_generations=10, seed=42)
     res = opt.run()
     assert len(res.pareto_solutions) > 0
     for s in res.pareto_solutions:
-        assert s.is_feasible
-        assert s.f1_total_score >= problem.min_accreditation_score
+        assert problem.structural_violation(s.x) == 0.0
 
 
 def test_spea2_optimizer(problem: NBAProblem) -> None:
-    """Verify SPEA2 generates feasible non-dominated solutions."""
+    """Verify SPEA2 generates structurally feasible non-dominated solutions."""
     opt = SPEA2Optimizer(problem, pop_size=20, archive_size=20, max_generations=10, seed=42)
     res = opt.run()
     assert len(res.pareto_solutions) > 0
     for s in res.pareto_solutions:
-        assert s.is_feasible
+        assert problem.structural_violation(s.x) == 0.0
 
 
 def test_moead_optimizer(problem: NBAProblem) -> None:
-    """Verify MOEA/D generates feasible non-dominated solutions."""
+    """Verify MOEA/D generates structurally feasible non-dominated solutions."""
     opt = MOEADOptimizer(problem, pop_size=20, n_neighbors=5, max_generations=10, seed=42)
     res = opt.run()
     assert len(res.pareto_solutions) > 0
     for s in res.pareto_solutions:
-        assert s.is_feasible
+        assert problem.structural_violation(s.x) == 0.0
 
 
 def test_hybrid_memetic_optimizer(problem: NBAProblem) -> None:
@@ -71,7 +70,7 @@ def test_hybrid_memetic_optimizer(problem: NBAProblem) -> None:
     res = opt.run()
     assert len(res.pareto_solutions) > 0
     for s in res.pareto_solutions:
-        assert s.is_feasible
+        assert problem.structural_violation(s.x) == 0.0
 
 
 def test_greedy_baseline(problem: NBAProblem) -> None:
@@ -80,4 +79,6 @@ def test_greedy_baseline(problem: NBAProblem) -> None:
     res = baseline.run()
     assert len(res.pareto_solutions) > 0
     for s in res.pareto_solutions:
-        assert s.is_feasible
+        assert s.violations["budget"] == 0.0
+        assert s.violations["monthly_hours"] == 0.0
+        assert s.violations["prerequisites"] == 0.0

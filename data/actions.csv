@@ -1,0 +1,46 @@
+action_id,crit_id,name,is_evidence,cost_lakh,faculty_hours,duration_months,prerequisites,max_units,marks_per_unit,sar_ref,origin
+E1,1,Evidence package for criterion 1,True,0.1,35,1,,1,0,,synthetic
+E2,2,Evidence package for criterion 2,True,0.1,40,2,,1,0,,synthetic
+E3,3,Evidence package for criterion 3,True,0.1,45,1,,1,0,,synthetic
+E4,4,Evidence package for criterion 4,True,0.1,50,2,,1,0,,synthetic
+E5,5,Evidence package for criterion 5,True,0.1,30,1,,1,0,,synthetic
+E6,6,Evidence package for criterion 6,True,0.1,35,2,,1,0,,synthetic
+E7,7,Evidence package for criterion 7,True,0.1,40,1,,1,0,,synthetic
+E8,8,Evidence package for criterion 8,True,0.1,45,2,,1,0,,synthetic
+E9,9,Evidence package for criterion 9,True,0.1,50,1,,1,0,,synthetic
+E10,10,Evidence package for criterion 10,True,0.1,30,2,,1,0,,synthetic
+A02,1,Run a PEO attainment review,False,0.3,60,2,E1,1,6,1.4,proposal
+A05,2,Refresh curriculum using industry feedback,False,0.5,120,4,A02;E2,1,8,2.1.1,proposal
+A09,3,Implement direct and indirect CO assessment,False,0.1,90,2,E3,1,10,3.2.1,proposal
+A10,3,Standardise CO-PO attainment analysis,False,0.1,150,3,A09,1,12,3.2.2,proposal
+A12,4,Create student performance improvement plan,False,0.3,100,4,E4,1,9,2.2.4;2.2.5,proposal
+A13,4,Strengthen placement and progression support,False,1.2,150,4,A12,1,12,4.4,proposal
+A14,5,Launch faculty mentoring and development,False,0.6,100,3,E5,1,6,5.7,proposal
+A15,5,Recruit a faculty member with a doctorate,False,12.0,200,6,E5,2,12,5.1;5.2;5.3,proposal
+A16,5,Establish faculty publication support,False,0.8,250,6,E5,1,10,5.8.1,proposal
+A18,6,Modernise core laboratory equipment,False,8.0,120,5,E6,1,14,6.1,proposal
+A19,6,Expand technical software support,False,0.2,160,3,E6,1,6,6.2,proposal
+A22,7,Close the loop on improvement actions,False,0.1,100,3,A09;E7,1,8,7.1,proposal
+A24,9,Improve mentoring and grievance support,False,0.1,80,2,E9,1,6,9.1;9.2,proposal
+A27,10,Strengthen budget monitoring controls,False,0.2,70,2,E10,1,5,10.2.2,proposal
+A01,1,SYNTHETIC: Stakeholder consultation evidence cycle,False,2.2,46,3,E1,1,5,1.1,synthetic
+A03,1,SYNTHETIC: Employer feedback and PEO dissemination,False,1.3,75,1,A02;E1,2,7,1.3,synthetic
+A04,2,SYNTHETIC: ICT-enabled teaching improvement,False,2.3,179,1,E2,1,12,2.2.1,synthetic
+A06,2,SYNTHETIC: Industry-aligned elective redesign,False,2.1,48,1,A05;E2,2,7,2.2.2,synthetic
+A07,3,SYNTHETIC: Question-paper quality audit,False,1.0,99,1,E3,1,12,3.1,synthetic
+A08,3,SYNTHETIC: Capstone PO mapping workshop,False,2.0,223,4,A09;E3,1,10,3.3.1,synthetic
+A11,4,SYNTHETIC: Placement preparation clinics,False,1.3,190,3,E4,1,12,4.1,synthetic
+A17,5,SYNTHETIC: Faculty workload and mentoring review,False,3.0,41,2,E5,1,3,5.8.2,synthetic
+A20,6,SYNTHETIC: Laboratory safety and calibration plan,False,3.0,127,3,E6,1,10,6.3,synthetic
+A21,7,SYNTHETIC: External academic peer review,False,3.0,235,3,A23;A22;E7,1,12,7.2,synthetic
+A23,7,SYNTHETIC: Continuous improvement dashboard,False,3.0,137,1,A20;E7,1,10,7.3,synthetic
+A25,8,SYNTHETIC: First-year bridge courses,False,1.6,128,3,E8,1,5,8.1,synthetic
+A26,8,SYNTHETIC: First-year laboratory orientation,False,2.6,226,4,E8,1,10,8.3,synthetic
+A28,8,SYNTHETIC: First-year mentoring induction,False,2.0,136,1,A25;E8,1,10,8.5.1,synthetic
+A29,9,SYNTHETIC: Career counselling programme,False,2.0,200,3,E9,1,5,9.3,synthetic
+A30,9,SYNTHETIC: Student wellness and inclusion support,False,2.1,220,1,A24;E9,1,10,9.5,synthetic
+A31,10,SYNTHETIC: Digital library resource expansion,False,0.9,98,3,E10,1,5,10.1.1,synthetic
+A32,10,SYNTHETIC: ERP reporting improvement,False,3.0,99,1,A27;E10,1,10,10.3.1,synthetic
+A33,10,SYNTHETIC: Green campus resource audit,False,1.6,156,3,E10,1,10,10.4.1,synthetic
+A34,5,SYNTHETIC: Research collaboration seed grants,False,3.0,130,2,A16;E5,1,3,5.8.2,synthetic
+A35,6,SYNTHETIC: Prototype and project laboratory setup,False,2.3,219,1,A18;E6,1,12,6.4,synthetic

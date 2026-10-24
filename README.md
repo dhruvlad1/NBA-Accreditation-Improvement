@@ -4,6 +4,12 @@ A university research and engineering optimization framework for strategic **Nat
 
 > **DISCLAIMER:** All datasets, institutional parameters, actions, and scores in this repository are **SYNTHETIC** and designed strictly for academic, research, and algorithmic benchmarking purposes.
 
+The criterion maxima and sub-criterion marks in `data/nba_criteria.csv` and
+`data/nba_subcriteria.csv` follow the official NBA SAR UG Engineering Tier-I
+first-time accreditation format. The programme profile and action values remain
+synthetic. Proposal action A12 retains its proposal criterion assignment (C4)
+even though its SAR references 2.2.4 and 2.2.5, which belong to C2.
+
 ---
 
 ## 1. Problem Overview & Mathematical Formulation
@@ -70,9 +76,12 @@ NBA-Accreditation-Improvement/
 ├── main.py                             # CLI runner for experiments & visualizations
 ├── data/
 │   ├── generate_dataset.py             # Synthetic dataset generator script
-│   └── synthetic_nba_actions.csv       # 45 actions with costs, hours, gains, prereqs
+│   ├── nba_criteria.csv                # Official NBA SAR criterion maxima
+│   ├── nba_subcriteria.csv             # SAR sub-criteria traceability marks
+│   ├── profile.csv                     # Synthetic programme baseline profile
+│   └── actions.csv                     # 45 evidence and improvement actions
 ├── experiments/
-│   └── config.yaml                     # Master configuration (B=30, T=12, K=300, R=750, criteria)
+│   └── config.yaml                     # Master configuration (B=30, T=12, K=300, R=750)
 ├── src/
 │   ├── __init__.py
 │   ├── problem.py                      # Domain formulation, schedule calculation, repair
