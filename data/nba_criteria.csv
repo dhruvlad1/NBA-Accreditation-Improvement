@@ -1,0 +1,11 @@
+crit_id,code,name,max_marks
+1,C1,"Vision, mission and PEOs",50
+2,C2,Curriculum and teaching-learning,100
+3,C3,Course outcomes and programme outcomes,175
+4,C4,Students' performance,100
+5,C5,Faculty information and contributions,200
+6,C6,Facilities and technical support,80
+7,C7,Continuous improvement,75
+8,C8,First-year academics,50
+9,C9,Student support systems,50
+10,C10,"Governance, institutional support and financial resources",120

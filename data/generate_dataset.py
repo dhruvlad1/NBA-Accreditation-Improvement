@@ -1,175 +1,208 @@
+"""Generate the synthetic NBA planning data files.
+
+The criteria and profile are based on the NBA SAR UG Engineering Tier-I
+first-time accreditation format.  The programme profile and action catalogue
+are synthetic and intended for this optimisation course project.
 """
-Script to generate synthetic NBA accreditation criteria and improvement actions dataset.
-Everything generated is explicitly marked synthetic for research and educational purposes.
-"""
+
+from __future__ import annotations
 
 import csv
-import json
+import random
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, Iterable, List
+
 import yaml
 
-DATA_DIR = Path("/Users/tirth_gujarati/NBA-Accreditation-Improvement/data")
-EXP_DIR = Path("/Users/tirth_gujarati/NBA-Accreditation-Improvement/experiments")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-EXP_DIR.mkdir(parents=True, exist_ok=True)
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT_DIR / "data"
+CONFIG_PATH = ROOT_DIR / "experiments" / "config.yaml"
 
-# 10 NBA Criteria (Tier-I Engineering Undergraduate)
-CRITERIA_SPECS = [
-    {"id": 1, "code": "C1", "name": "Vision, Mission and PEOs", "max_score": 50.0, "baseline_score": 30.0, "min_threshold": 25.0},
-    {"id": 2, "code": "C2", "name": "Program Curriculum and Teaching-Learning Processes", "max_score": 100.0, "baseline_score": 62.0, "min_threshold": 55.0},
-    {"id": 3, "code": "C3", "name": "Course Outcomes and Program Outcomes (CO-PO)", "max_score": 175.0, "baseline_score": 105.0, "min_threshold": 95.0},
-    {"id": 4, "code": "C4", "name": "Students' Performance", "max_score": 100.0, "baseline_score": 60.0, "min_threshold": 55.0},
-    {"id": 5, "code": "C5", "name": "Faculty Information and Contributions", "max_score": 200.0, "baseline_score": 125.0, "min_threshold": 110.0},
-    {"id": 6, "code": "C6", "name": "Facilities and Technical Support", "max_score": 80.0, "baseline_score": 52.0, "min_threshold": 44.0},
-    {"id": 7, "code": "C7", "name": "Continuous Improvement", "max_score": 75.0, "baseline_score": 42.0, "min_threshold": 40.0},
-    {"id": 8, "code": "C8", "name": "First Year Academics", "max_score": 50.0, "baseline_score": 32.0, "min_threshold": 28.0},
-    {"id": 9, "code": "C9", "name": "Student Support Systems", "max_score": 50.0, "baseline_score": 31.0, "min_threshold": 28.0},
-    {"id": 10, "code": "C10", "name": "Governance, Institutional Support and Financial Resources", "max_score": 120.0, "baseline_score": 76.0, "min_threshold": 65.0},
+CRITERIA = [
+    (1, "C1", "Vision, mission and PEOs", 50),
+    (2, "C2", "Curriculum and teaching-learning", 100),
+    (3, "C3", "Course outcomes and programme outcomes", 175),
+    (4, "C4", "Students' performance", 100),
+    (5, "C5", "Faculty information and contributions", 200),
+    (6, "C6", "Facilities and technical support", 80),
+    (7, "C7", "Continuous improvement", 75),
+    (8, "C8", "First-year academics", 50),
+    (9, "C9", "Student support systems", 50),
+    (10, "C10", "Governance, institutional support and financial resources", 120),
 ]
 
-# Total marks: 1000, Total baseline: 515. Minimum accreditation: 750.
-
-# 45 Actions definitions:
-# Each criterion has an Evidence Package (E1..E10).
-# All other actions in criterion c require Ec (and some have secondary prereqs).
-# 1 or 2 actions will have F_a > 12 to demonstrate constraint (3) handling.
-ACTIONS_SPECS = [
-    # Criterion 1 (4 actions)
-    {"action_id": "ACT_01", "crit_id": 1, "name": "SYNTHETIC E1: Stakeholder Consultation & PEO Review Dossier", "is_evidence": True, "cost": 0.4, "hours": 45, "duration": 2, "prereqs": [], "max_u": 1, "gain": 6.0},
-    {"action_id": "ACT_02", "crit_id": 1, "name": "SYNTHETIC: Alumni Survey Automation & Employer Feedback Cycle", "is_evidence": False, "cost": 0.6, "hours": 30, "duration": 2, "prereqs": ["ACT_01"], "max_u": 2, "gain": 4.5},
-    {"action_id": "ACT_03", "crit_id": 1, "name": "SYNTHETIC: Departmental Advisory Board (DAB) Governance Review", "is_evidence": False, "cost": 0.5, "hours": 24, "duration": 2, "prereqs": ["ACT_01"], "max_u": 1, "gain": 4.0},
-    {"action_id": "ACT_04", "crit_id": 1, "name": "SYNTHETIC: PEO Dissemination & Internal Stakeholder Workshops", "is_evidence": False, "cost": 0.3, "hours": 20, "duration": 1, "prereqs": ["ACT_01"], "max_u": 2, "gain": 3.0},
-
-    # Criterion 2 (5 actions)
-    {"action_id": "ACT_05", "crit_id": 2, "name": "SYNTHETIC E2: Curriculum Benchmarking & Gap Audit Package", "is_evidence": True, "cost": 0.8, "hours": 60, "duration": 2, "prereqs": [], "max_u": 1, "gain": 8.0},
-    {"action_id": "ACT_06", "crit_id": 2, "name": "SYNTHETIC: Industry-Aligned Electives Development & Labs", "is_evidence": False, "cost": 1.5, "hours": 75, "duration": 3, "prereqs": ["ACT_05"], "max_u": 2, "gain": 7.0},
-    {"action_id": "ACT_07", "crit_id": 2, "name": "SYNTHETIC: ICT-Enabled Pedagogical Training for Faculty", "is_evidence": False, "cost": 0.9, "hours": 40, "duration": 2, "prereqs": ["ACT_05"], "max_u": 2, "gain": 5.0},
-    {"action_id": "ACT_08", "crit_id": 2, "name": "SYNTHETIC: Internship & Field Project Evaluation Framework", "is_evidence": False, "cost": 0.7, "hours": 36, "duration": 2, "prereqs": ["ACT_05"], "max_u": 2, "gain": 4.5},
-    {"action_id": "ACT_09", "crit_id": 2, "name": "SYNTHETIC: Digital Course Files & LMS Content Accreditation Audit", "is_evidence": False, "cost": 0.6, "hours": 50, "duration": 2, "prereqs": ["ACT_05"], "max_u": 1, "gain": 6.5},
-
-    # Criterion 3 (5 actions)
-    {"action_id": "ACT_10", "crit_id": 3, "name": "SYNTHETIC E3: OBE Direct/Indirect Assessment Framework & Rubrics", "is_evidence": True, "cost": 1.0, "hours": 80, "duration": 3, "prereqs": [], "max_u": 1, "gain": 14.0},
-    {"action_id": "ACT_11", "crit_id": 3, "name": "SYNTHETIC: Automated CO-PO Attainment Computation Software", "is_evidence": False, "cost": 1.8, "hours": 45, "duration": 2, "prereqs": ["ACT_10"], "max_u": 1, "gain": 12.0},
-    {"action_id": "ACT_12", "crit_id": 3, "name": "SYNTHETIC: Bloom's Taxonomy Exam Question Paper Auditing", "is_evidence": False, "cost": 0.5, "hours": 60, "duration": 2, "prereqs": ["ACT_10"], "max_u": 2, "gain": 9.0},
-    {"action_id": "ACT_13", "crit_id": 3, "name": "SYNTHETIC: Capstone Project PO-Mapping & Rubric Standardisation", "is_evidence": False, "cost": 0.7, "hours": 40, "duration": 2, "prereqs": ["ACT_10"], "max_u": 2, "gain": 8.0},
-    {"action_id": "ACT_14", "crit_id": 3, "name": "SYNTHETIC: Remedial Diagnostic Assessment for Slow Learners", "is_evidence": False, "cost": 0.6, "hours": 50, "duration": 3, "prereqs": ["ACT_10"], "max_u": 2, "gain": 7.5},
-
-    # Criterion 4 (5 actions)
-    {"action_id": "ACT_15", "crit_id": 4, "name": "SYNTHETIC E4: Student Graduation & Placement Verification Dossier", "is_evidence": True, "cost": 0.5, "hours": 40, "duration": 2, "prereqs": [], "max_u": 1, "gain": 8.0},
-    {"action_id": "ACT_16", "crit_id": 4, "name": "SYNTHETIC: Campus Placement Preparation & Mock Technical Interviews", "is_evidence": False, "cost": 1.4, "hours": 70, "duration": 3, "prereqs": ["ACT_15"], "max_u": 2, "gain": 9.0},
-    {"action_id": "ACT_17", "crit_id": 4, "name": "SYNTHETIC: GATE / Competitive Exam Coaching & Portal Access", "is_evidence": False, "cost": 1.0, "hours": 35, "duration": 3, "prereqs": ["ACT_15"], "max_u": 2, "gain": 6.5},
-    {"action_id": "ACT_18", "crit_id": 4, "name": "SYNTHETIC: Professional Societies Student Chapter Activities", "is_evidence": False, "cost": 0.8, "hours": 30, "duration": 2, "prereqs": ["ACT_15"], "max_u": 2, "gain": 5.0},
-    {"action_id": "ACT_19", "crit_id": 4, "name": "SYNTHETIC: Student Technical Symposium & Hackathon Sponsorship", "is_evidence": False, "cost": 1.2, "hours": 40, "duration": 2, "prereqs": ["ACT_15"], "max_u": 1, "gain": 6.0},
-
-    # Criterion 5 (6 actions)
-    {"action_id": "ACT_20", "crit_id": 5, "name": "SYNTHETIC E5: Faculty Cadre Ratio & Qualification Verification Dossier", "is_evidence": True, "cost": 0.6, "hours": 50, "duration": 2, "prereqs": [], "max_u": 1, "gain": 12.0},
-    {"action_id": "ACT_21", "crit_id": 5, "name": "SYNTHETIC: Faculty Research Publication Incentives (SCI/Scopus)", "is_evidence": False, "cost": 2.5, "hours": 40, "duration": 4, "prereqs": ["ACT_20"], "max_u": 2, "gain": 15.0},
-    {"action_id": "ACT_22", "crit_id": 5, "name": "SYNTHETIC: National/International Conference Travel Grants", "is_evidence": False, "cost": 1.5, "hours": 20, "duration": 3, "prereqs": ["ACT_20"], "max_u": 2, "gain": 9.0},
-    {"action_id": "ACT_23", "crit_id": 5, "name": "SYNTHETIC: Faculty Development Programs (FDP / NPTEL Certifications)", "is_evidence": False, "cost": 1.0, "hours": 45, "duration": 2, "prereqs": ["ACT_20"], "max_u": 2, "gain": 10.0},
-    {"action_id": "ACT_24", "crit_id": 5, "name": "SYNTHETIC: Sponsored Research & Industry Consultancy Drive", "is_evidence": False, "cost": 2.0, "hours": 60, "duration": 3, "prereqs": ["ACT_20"], "max_u": 1, "gain": 14.0},
-    {"action_id": "ACT_25", "crit_id": 5, "name": "SYNTHETIC: Patent Filing & Intellectual Property Workshop", "is_evidence": False, "cost": 1.2, "hours": 30, "duration": 2, "prereqs": ["ACT_20"], "max_u": 2, "gain": 8.0},
-
-    # Criterion 6 (5 actions)
-    {"action_id": "ACT_26", "crit_id": 6, "name": "SYNTHETIC E6: Lab Equipment Modernisation & Safety Audit Dossier", "is_evidence": True, "cost": 0.5, "hours": 40, "duration": 2, "prereqs": [], "max_u": 1, "gain": 6.0},
-    {"action_id": "ACT_27", "crit_id": 6, "name": "SYNTHETIC: Core Computing & Specialized Hardware Lab Upgrade", "is_evidence": False, "cost": 3.0, "hours": 40, "duration": 3, "prereqs": ["ACT_26"], "max_u": 1, "gain": 10.0},
-    {"action_id": "ACT_28", "crit_id": 6, "name": "SYNTHETIC: Engineering Software Licenses (MATLAB/EDA/Simulators)", "is_evidence": False, "cost": 2.2, "hours": 25, "duration": 2, "prereqs": ["ACT_26"], "max_u": 1, "gain": 7.0},
-    {"action_id": "ACT_29", "crit_id": 6, "name": "SYNTHETIC: Lab Technical Staff Skill Enhancement Workshop", "is_evidence": False, "cost": 0.4, "hours": 30, "duration": 2, "prereqs": ["ACT_26"], "max_u": 1, "gain": 3.5},
-    {"action_id": "ACT_30", "crit_id": 6, "name": "SYNTHETIC: Project Laboratory & Prototyping Space Setup", "is_evidence": False, "cost": 1.8, "hours": 50, "duration": 3, "prereqs": ["ACT_26"], "max_u": 1, "gain": 6.5},
-
-    # Criterion 7 (4 actions)
-    {"action_id": "ACT_31", "crit_id": 7, "name": "SYNTHETIC E7: Academic Audit & Continuous Improvement Cycle Dossier", "is_evidence": True, "cost": 0.4, "hours": 35, "duration": 2, "prereqs": [], "max_u": 1, "gain": 7.0},
-    {"action_id": "ACT_32", "crit_id": 7, "name": "SYNTHETIC: Closing the Loop PO/PSO Attainment Actions Plan", "is_evidence": False, "cost": 0.8, "hours": 50, "duration": 3, "prereqs": ["ACT_31"], "max_u": 2, "gain": 9.0},
-    {"action_id": "ACT_33", "crit_id": 7, "name": "SYNTHETIC: External Peer Review & Accreditation Mock Inspection", "is_evidence": False, "cost": 1.2, "hours": 45, "duration": 2, "prereqs": ["ACT_31", "ACT_32"], "max_u": 1, "gain": 10.0},
-    {"action_id": "ACT_34", "crit_id": 7, "name": "SYNTHETIC: Longitudinal Multi-Year Expansion & Renovation Plan", "is_evidence": False, "cost": 4.0, "hours": 70, "duration": 8, "prereqs": ["ACT_31", "ACT_33"], "max_u": 1, "gain": 8.0},  # Notice duration 8 after ACT_33: F will be 2+3+2+8 = 15 > 12! Constraint 3 test!
-
-    # Criterion 8 (4 actions)
-    {"action_id": "ACT_35", "crit_id": 8, "name": "SYNTHETIC E8: First-Year Student-Faculty Ratio & Mentoring Dossier", "is_evidence": True, "cost": 0.3, "hours": 30, "duration": 2, "prereqs": [], "max_u": 1, "gain": 4.5},
-    {"action_id": "ACT_36", "crit_id": 8, "name": "SYNTHETIC: Bridge Courses in Mathematics & Programming", "is_evidence": False, "cost": 0.6, "hours": 40, "duration": 2, "prereqs": ["ACT_35"], "max_u": 2, "gain": 5.5},
-    {"action_id": "ACT_37", "crit_id": 8, "name": "SYNTHETIC: Basic Sciences Lab Modernisation & Safety Protocols", "is_evidence": False, "cost": 1.0, "hours": 30, "duration": 2, "prereqs": ["ACT_35"], "max_u": 1, "gain": 5.0},
-    {"action_id": "ACT_38", "crit_id": 8, "name": "SYNTHETIC: First-Year Induction Program (AICTE Guidelines)", "is_evidence": False, "cost": 0.5, "hours": 25, "duration": 1, "prereqs": ["ACT_35"], "max_u": 1, "gain": 4.0},
-
-    # Criterion 9 (3 actions)
-    {"action_id": "ACT_39", "crit_id": 9, "name": "SYNTHETIC E9: Mentoring & Grievance Redressal Mechanism Dossier", "is_evidence": True, "cost": 0.3, "hours": 35, "duration": 2, "prereqs": [], "max_u": 1, "gain": 5.0},
-    {"action_id": "ACT_40", "crit_id": 9, "name": "SYNTHETIC: Professional Career Counseling & Mental Health Support", "is_evidence": False, "cost": 0.8, "hours": 30, "duration": 2, "prereqs": ["ACT_39"], "max_u": 2, "gain": 6.5},
-    {"action_id": "ACT_41", "crit_id": 9, "name": "SYNTHETIC: Entrepreneurship Cell & Incubation Facility Grants", "is_evidence": False, "cost": 1.4, "hours": 35, "duration": 3, "prereqs": ["ACT_39"], "max_u": 1, "gain": 8.0},
-
-    # Criterion 10 (4 actions)
-    {"action_id": "ACT_42", "crit_id": 10, "name": "SYNTHETIC E10: Governance, Budget Allocation & Utilization Dossier", "is_evidence": True, "cost": 0.5, "hours": 40, "duration": 2, "prereqs": [], "max_u": 1, "gain": 10.0},
-    {"action_id": "ACT_43", "crit_id": 10, "name": "SYNTHETIC: Library Digital Subscriptions (IEEE/Springer) & Automation", "is_evidence": False, "cost": 2.0, "hours": 20, "duration": 2, "prereqs": ["ACT_42"], "max_u": 1, "gain": 12.0},
-    {"action_id": "ACT_44", "crit_id": 10, "name": "SYNTHETIC: ERP & Academic Management Information System Deployment", "is_evidence": False, "cost": 2.8, "hours": 50, "duration": 3, "prereqs": ["ACT_42"], "max_u": 1, "gain": 13.0},
-    {"action_id": "ACT_45", "crit_id": 10, "name": "SYNTHETIC: Green Campus, Solar Energy & Waste Management Audit", "is_evidence": False, "cost": 1.2, "hours": 25, "duration": 2, "prereqs": ["ACT_42"], "max_u": 1, "gain": 9.0},
+SUBCRITERIA: List[tuple[str, int, int]] = [
+    ("1.1", 1, 5), ("1.2", 1, 5), ("1.3", 1, 15), ("1.4", 1, 15), ("1.5", 1, 10),
+    ("2.1.1", 2, 10), ("2.1.2", 2, 5), ("2.1.3", 2, 5), ("2.1.4", 2, 10),
+    ("2.2.1", 2, 15), ("2.2.2", 2, 15), ("2.2.3", 2, 20), ("2.2.4", 2, 10), ("2.2.5", 2, 10),
+    ("3.1", 3, 25), ("3.2.1", 3, 10), ("3.2.2", 3, 65), ("3.3.1", 3, 10), ("3.3.2", 3, 65),
+    ("4.1", 4, 20), ("4.2.1", 4, 15), ("4.2.2", 4, 5), ("4.3", 4, 10), ("4.4", 4, 30),
+    ("4.5.1", 4, 5), ("4.5.2", 4, 5), ("4.5.3", 4, 10),
+    ("5.1", 5, 20), ("5.2", 5, 20), ("5.3", 5, 20), ("5.4", 5, 10), ("5.5", 5, 10),
+    ("5.6", 5, 10), ("5.7", 5, 15), ("5.8.1", 5, 20), ("5.8.2", 5, 20),
+    ("5.8.3", 5, 15), ("5.8.4", 5, 20), ("5.9", 5, 10), ("5.10", 5, 10),
+    ("6.1", 6, 40), ("6.2", 6, 10), ("6.3", 6, 10), ("6.4", 6, 20),
+    ("7.1", 7, 30), ("7.2", 7, 15), ("7.3", 7, 10), ("7.4", 7, 20),
+    ("8.1", 8, 5), ("8.2", 8, 5), ("8.3", 8, 10), ("8.4.1", 8, 5), ("8.4.2", 8, 5),
+    ("8.5.1", 8, 10), ("8.5.2", 8, 10),
+    ("9.1", 9, 5), ("9.2", 9, 10), ("9.3", 9, 5), ("9.4", 9, 5), ("9.5", 9, 10),
+    ("9.6", 9, 5), ("9.7", 9, 10),
+    ("10.1.1", 10, 5), ("10.1.2", 10, 25), ("10.1.3", 10, 10), ("10.1.4", 10, 5),
+    ("10.1.5", 10, 5), ("10.1.6", 10, 5), ("10.2.1", 10, 5), ("10.2.2", 10, 5),
+    ("10.2.3", 10, 5), ("10.3.1", 10, 10), ("10.3.2", 10, 20), ("10.4.1", 10, 10),
+    ("10.4.2", 10, 10),
 ]
+
+CURRENT_MARKS = [38, 70, 110, 70, 100, 58, 38, 36, 34, 96]
+MIN_LEVELS = [25, 50, 87.5, 60, 120, 48, 37.5, 25, 25, 60]
+
+ACTION_FIELDS = [
+    "action_id", "crit_id", "name", "is_evidence", "cost_lakh", "faculty_hours",
+    "duration_months", "prerequisites", "max_units", "marks_per_unit", "sar_ref", "origin",
+]
+
+
+def proposal_rows() -> List[Dict[str, object]]:
+    def row(action_id: str, crit_id: int, name: str, cost: float, hours: int, duration: int,
+            prereqs: str, marks: int, refs: str, max_units: int = 1) -> Dict[str, object]:
+        return {
+            "action_id": action_id, "crit_id": crit_id, "name": name, "is_evidence": False,
+            "cost_lakh": cost, "faculty_hours": hours, "duration_months": duration,
+            "prerequisites": prereqs, "max_units": max_units, "marks_per_unit": marks,
+            "sar_ref": refs, "origin": "proposal",
+        }
+
+    return [
+        row("A02", 1, "Run a PEO attainment review", 0.3, 60, 2, "E1", 6, "1.4"),
+        row("A05", 2, "Refresh curriculum using industry feedback", 0.5, 120, 4, "A02;E2", 8, "2.1.1"),
+        row("A09", 3, "Implement direct and indirect CO assessment", 0.1, 90, 2, "E3", 10, "3.2.1"),
+        row("A10", 3, "Standardise CO-PO attainment analysis", 0.1, 150, 3, "A09", 12, "3.2.2"),
+        row("A12", 4, "Create student performance improvement plan", 0.3, 100, 4, "E4", 9, "2.2.4;2.2.5"),
+        row("A13", 4, "Strengthen placement and progression support", 1.2, 150, 4, "A12", 12, "4.4"),
+        row("A14", 5, "Launch faculty mentoring and development", 0.6, 100, 3, "E5", 6, "5.7"),
+        row("A15", 5, "Recruit a faculty member with a doctorate", 12.0, 200, 6, "E5", 12, "5.1;5.2;5.3", 2),
+        row("A16", 5, "Establish faculty publication support", 0.8, 250, 6, "E5", 10, "5.8.1"),
+        row("A18", 6, "Modernise core laboratory equipment", 8.0, 120, 5, "E6", 14, "6.1"),
+        row("A19", 6, "Expand technical software support", 0.2, 160, 3, "E6", 6, "6.2"),
+        row("A22", 7, "Close the loop on improvement actions", 0.1, 100, 3, "A09;E7", 8, "7.1"),
+        row("A24", 9, "Improve mentoring and grievance support", 0.1, 80, 2, "E9", 6, "9.1;9.2"),
+        row("A27", 10, "Strengthen budget monitoring controls", 0.2, 70, 2, "E10", 5, "10.2.2"),
+    ]
+
+
+SYNTHETIC_TEMPLATES = [
+    ("A01", 1, "Stakeholder consultation evidence cycle", "1.1", "E1"),
+    ("A03", 1, "Employer feedback and PEO dissemination", "1.3", "A02;E1"),
+    ("A04", 2, "ICT-enabled teaching improvement", "2.2.1", "E2"),
+    ("A06", 2, "Industry-aligned elective redesign", "2.2.2", "A05;E2"),
+    ("A07", 3, "Question-paper quality audit", "3.1", "E3"),
+    ("A08", 3, "Capstone PO mapping workshop", "3.3.1", "A09;E3"),
+    ("A11", 4, "Placement preparation clinics", "4.1", "E4"),
+    ("A17", 5, "Faculty workload and mentoring review", "5.8.2", "E5"),
+    ("A20", 6, "Laboratory safety and calibration plan", "6.3", "E6"),
+    ("A21", 7, "External academic peer review", "7.2", "A23;A22;E7"),
+    ("A23", 7, "Continuous improvement dashboard", "7.3", "A20;E7"),
+    ("A25", 8, "First-year bridge courses", "8.1", "E8"),
+    ("A26", 8, "First-year laboratory orientation", "8.3", "E8"),
+    ("A28", 8, "First-year mentoring induction", "8.5.1", "A25;E8"),
+    ("A29", 9, "Career counselling programme", "9.3", "E9"),
+    ("A30", 9, "Student wellness and inclusion support", "9.5", "A24;E9"),
+    ("A31", 10, "Digital library resource expansion", "10.1.1", "E10"),
+    ("A32", 10, "ERP reporting improvement", "10.3.1", "A27;E10"),
+    ("A33", 10, "Green campus resource audit", "10.4.1", "E10"),
+    ("A34", 5, "Research collaboration seed grants", "5.8.2", "A16;E5"),
+    ("A35", 6, "Prototype and project laboratory setup", "6.4", "A18;E6"),
+]
+
+
+def evidence_rows() -> List[Dict[str, object]]:
+    return [{
+        "action_id": f"E{criterion_id}", "crit_id": criterion_id,
+        "name": f"Evidence package for criterion {criterion_id}", "is_evidence": True,
+        "cost_lakh": 0.1, "faculty_hours": 30 + (criterion_id % 5) * 5,
+        "duration_months": 1 if criterion_id % 2 else 2, "prerequisites": "",
+        "max_units": 1, "marks_per_unit": 0, "sar_ref": "", "origin": "synthetic",
+    } for criterion_id, _, _, _ in CRITERIA]
+
+
+def synthetic_rows(seed: int) -> List[Dict[str, object]]:
+    rng = random.Random(seed)
+    ref_marks = {code: marks for code, _, marks in SUBCRITERIA}
+    rows = []
+    for action_id, crit_id, name, ref, prereqs in SYNTHETIC_TEMPLATES:
+        capacity = ref_marks[ref]
+        max_units = 2 if action_id in {"A03", "A06"} else 1
+        marks = min(12, capacity // max_units)
+        generated = {
+            "action_id": action_id, "crit_id": crit_id, "name": f"SYNTHETIC: {name}",
+            "is_evidence": False, "cost_lakh": round(rng.uniform(0.8, 3.0), 1),
+            "faculty_hours": rng.randint(40, 250), "duration_months": rng.randint(1, 4),
+            "prerequisites": prereqs, "max_units": max_units, "marks_per_unit": marks,
+            "sar_ref": ref, "origin": "synthetic",
+        }
+        if action_id in {"A17", "A20", "A21", "A23"}:
+            generated["cost_lakh"] = 3.0
+            if action_id == "A17":
+                generated["marks_per_unit"] = 3
+        elif action_id == "A34":
+            generated["cost_lakh"] = 3.0
+            generated["marks_per_unit"] = 3
+        rows.append(generated)
+    return rows
+
+
+def earliest_finishes(rows: Iterable[Dict[str, object]]) -> Dict[str, int]:
+    by_id = {str(row["action_id"]): row for row in rows}
+    cache: Dict[str, int] = {}
+
+    def finish(action_id: str) -> int:
+        if action_id in cache:
+            return cache[action_id]
+        row = by_id[action_id]
+        prereqs = [p for p in str(row["prerequisites"]).split(";") if p]
+        cache[action_id] = int(row["duration_months"]) + max((finish(p) for p in prereqs), default=0)
+        return cache[action_id]
+
+    return {action_id: finish(action_id) for action_id in by_id}
 
 
 def generate_files() -> None:
-    # 1. Write CSV dataset
-    csv_path = DATA_DIR / "synthetic_nba_actions.csv"
-    fieldnames = [
-        "action_id", "crit_id", "name", "is_evidence", "cost_lakh",
-        "faculty_hours", "duration_months", "prerequisites", "max_units", "score_gain"
-    ]
-    with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+    config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
+    seed = int(config.get("data", {}).get("seed", 42))
+    rows = evidence_rows() + proposal_rows() + synthetic_rows(seed)
+    finishes = earliest_finishes(rows)
+    assert len(rows) == 45
+    assert max(finishes.values()) <= int(config["planning_parameters"]["planning_horizon_months"])
+
+    with (DATA_DIR / "nba_criteria.csv").open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["crit_id", "code", "name", "max_marks"])
+        writer.writerows(CRITERIA)
+    with (DATA_DIR / "nba_subcriteria.csv").open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["code", "crit_id", "max_marks"])
+        writer.writerows(SUBCRITERIA)
+    with (DATA_DIR / "profile.csv").open("w", newline="", encoding="utf-8") as file:
+        file.write("# SYNTHETIC programme profile; current marks total 650\n")
+        writer = csv.writer(file)
+        writer.writerow(["crit_id", "current_marks", "min_level", "is_mandatory"])
+        writer.writerows((idx, CURRENT_MARKS[idx - 1], MIN_LEVELS[idx - 1], idx in {4, 5, 6})
+                         for idx in range(1, 11))
+    with (DATA_DIR / "actions.csv").open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=ACTION_FIELDS)
         writer.writeheader()
-        for a in ACTIONS_SPECS:
-            row = {
-                "action_id": a["action_id"],
-                "crit_id": a["crit_id"],
-                "name": a["name"],
-                "is_evidence": a["is_evidence"],
-                "cost_lakh": a["cost"],
-                "faculty_hours": a["hours"],
-                "duration_months": a["duration"],
-                "prerequisites": ";".join(a["prereqs"]),
-                "max_units": a["max_u"],
-                "score_gain": a["gain"],
-            }
-            writer.writerow(row)
+        writer.writerows(rows)
 
-    print(f"Wrote {len(ACTIONS_SPECS)} actions to {csv_path}")
-
-    # 2. Write YAML config
-    config_data: Dict[str, Any] = {
-        "dataset_metadata": {
-            "name": "Synthetic NBA Tier-I Engineering Accreditation Dataset",
-            "is_synthetic": True,
-            "actions_file": "data/synthetic_nba_actions.csv",
-            "total_actions": len(ACTIONS_SPECS),
-            "total_criteria": len(CRITERIA_SPECS),
-            "description": "Synthetic multi-objective benchmark dataset for university NBA improvement planning.",
-        },
-        "planning_parameters": {
-            "budget_lakh": 30.0,             # B = 30 Lakh INR
-            "planning_horizon_months": 12,    # T = 12 months
-            "monthly_faculty_capacity": 300.0,# K_m = 300 hours/month
-            "min_accreditation_score": 750.0, # R = 750 marks out of 1000
-        },
-        "criteria": CRITERIA_SPECS,
-        "algorithm_parameters": {
-            "random_seed": 42,
-            "population_size": 100,
-            "max_generations": 120,
-            "crossover_probability": 0.9,
-            "mutation_probability": 0.15,
-            "tournament_size": 2,
-            "archive_size": 100,
-            "moead_neighbors": 15,
-            "spea2_archive_size": 100,
-            "local_search_iterations": 20,
-        },
-        "experiments": {
-            "seeds": [42, 101, 2024, 777, 999],
-            "algorithms": ["NSGA-II", "SPEA2", "MOEA/D", "Hybrid-Memetic", "Greedy-Baseline", "Random-Baseline", "MILP-HiGHS"],
-            "metrics": ["hypervolume", "spacing", "spread", "coverage", "feasibility_rate"],
-        }
-    }
-
-    yaml_path = EXP_DIR / "config.yaml"
-    with open(yaml_path, "w", encoding="utf-8") as f:
-        yaml.dump(config_data, f, sort_keys=False, default_flow_style=False)
-
-    print(f"Wrote config to {yaml_path}")
+    total_cost = sum(float(row["cost_lakh"]) * int(row["max_units"]) for row in rows)
+    marks_by_criterion = {criterion_id: sum(
+        float(row["marks_per_unit"]) * int(row["max_units"])
+        for row in rows if int(row["crit_id"]) == criterion_id
+    ) for criterion_id, _, _, _ in CRITERIA}
+    print(f"Wrote {len(rows)} actions, {len(CRITERIA)} criteria, {len(SUBCRITERIA)} sub-criteria")
+    print(f"Total cost if all action units are taken: {total_cost:.1f} lakh")
+    print("Total marks available by criterion: " + ", ".join(
+        f"C{criterion_id}={marks_by_criterion[criterion_id]:.0f}" for criterion_id, _, _, _ in CRITERIA
+    ))
 
 
 if __name__ == "__main__":
