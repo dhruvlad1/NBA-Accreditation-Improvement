@@ -74,6 +74,7 @@ NBA-Accreditation-Improvement/
 ├── requirements.txt                    # Python dependencies
 ├── pytest.ini                          # Unit testing configuration
 ├── main.py                             # CLI runner for experiments & visualizations
+├── app.py                              # Interactive Streamlit Web App / Decision Support System
 ├── data/
 │   ├── generate_dataset.py             # Synthetic dataset generator script
 │   ├── nba_criteria.csv                # Official NBA SAR criterion maxima

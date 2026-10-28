@@ -11,4 +11,5 @@ planning_parameters:
 data:
   criteria_file: data/nba_criteria.csv
   profile_file: data/profile.csv
+  subcriteria_file: data/nba_subcriteria.csv
   actions_file: data/actions_small.csv
