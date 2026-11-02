@@ -276,6 +276,7 @@ class NBAProblem:
         self.gains = np.array([a.score_gain for a in self.actions], dtype=np.float64)
         self.durations = np.array([a.duration_months for a in self.actions], dtype=np.float64)
         self.schedulable_mask = np.array([a.is_schedulable for a in self.actions], dtype=bool)
+        self.unschedulable_mask = ~self.schedulable_mask
 
         # Monthly effort rate per unit for each action: h_a / d_a
         self.monthly_rate = self.hours / np.maximum(self.durations, 1.0)
@@ -324,6 +325,29 @@ class NBAProblem:
                 self.dep[prerequisite, action.index] = True
                 pending.extend(self.actions[prerequisite].prereq_indices)
 
+        # Reuse these immutable masks during repair instead of repeatedly
+        # scanning the transitive dependency matrix and rebuilding bundles.
+        self.prerequisite_closures = tuple(
+            np.flatnonzero(self.dep[:, action_idx])
+            for action_idx in range(self.num_actions)
+        )
+        self.repair_bundle_masks = tuple(
+            self.dep[:, action_idx] | (np.arange(self.num_actions) == action_idx)
+            for action_idx in range(self.num_actions)
+        )
+        self._action_masks = tuple(
+            np.arange(self.num_actions) == action_idx
+            for action_idx in range(self.num_actions)
+        )
+        self.unschedulable_dependants = (
+            np.any(self.dep[self.unschedulable_mask], axis=0)
+            if np.any(self.unschedulable_mask)
+            else np.zeros(self.num_actions, dtype=bool)
+        )
+        self.criterion_action_indices = tuple(
+            c.action_indices for c in self.criteria
+        )
+
     def evaluate(self, x: np.ndarray) -> EvaluationResult:
         """
         Evaluate a candidate solution x.
@@ -355,14 +379,14 @@ class NBAProblem:
 
         # 4. Check constraints
         # (1) Budget: f2 <= B
-        budget_viol = max(0.0, f2 - self.budget)
+        budget_viol = f2 - self.budget if f2 > self.budget else 0.0
 
         # (2) Monthly faculty capacity: H_m <= K_m
         monthly_viols = np.maximum(0.0, monthly_hours - self.monthly_capacity)
         monthly_viol_total = float(np.sum(monthly_viols))
 
         # (3) Deadline: x_a = 0 if F_a > T
-        unschedulable_units = x[~self.schedulable_mask]
+        unschedulable_units = x[self.unschedulable_mask]
         deadline_viol = float(np.sum(unschedulable_units))
 
         # (4) Prerequisites: x_a <= u_a * x_b
@@ -374,7 +398,10 @@ class NBAProblem:
         crit_viol_total = float(np.sum(crit_viols))
 
         # (6) Accreditation target: f1 >= R
-        target_viol = max(0.0, self.min_accreditation_score - f1)
+        target_viol = (
+            self.min_accreditation_score - f1
+            if f1 < self.min_accreditation_score else 0.0
+        )
 
         violations = {
             "budget": budget_viol,
@@ -595,7 +622,7 @@ class NBAProblem:
                 candidates.append((action_idx, bundle, ratio))
             lowest = min(item[2] for item in candidates)
             tied = [item for item in candidates
-                    if np.isclose(item[2], lowest, rtol=0.0, atol=1e-12)]
+                    if abs(item[2] - lowest) <= 1e-12]
             chosen = (min(tied, key=lambda item: item[0]) if rng is None
                       else tied[int(rng.integers(0, len(tied)))])
             sol[chosen[1]] = 0
@@ -644,31 +671,27 @@ def print_diagnostics(problem: NBAProblem, seed: int = 0, sample_size: int = 200
         """Repair constraints 1-4 exactly as specified in Proposal Section 10."""
         sol = np.array(x, dtype=np.int32)
         sol = np.clip(sol, 0, self.upper_bounds)
-        sol[~self.schedulable_mask] = 0
+        sol[self.unschedulable_mask] = 0
 
         # Add one unit for every selected action's transitive prerequisite closure.
         for action_idx in np.flatnonzero(sol > 0):
-            prerequisites = np.flatnonzero(self.dep[:, action_idx])
+            prerequisites = self.prerequisite_closures[action_idx]
             sol[prerequisites] = np.maximum(sol[prerequisites], 1)
 
         # Remove unschedulable actions and all their transitive dependants.
-        for action_idx in np.flatnonzero(~self.schedulable_mask):
-            sol[action_idx] = 0
-            sol[self.dep[action_idx]] = 0
+        sol[self.unschedulable_dependants] = 0
 
         # Remove the lowest-value bundle until both resource constraints hold.
         hours_scale = self.monthly_capacity * self.planning_horizon
         while (float(np.dot(self.costs, sol)) > self.budget or
                np.any(self.schedule_matrix @ sol > self.monthly_capacity)):
             candidates: List[Tuple[int, np.ndarray, float]] = []
-            for action_idx in np.flatnonzero(sol > 0):
+            active_mask = sol > 0
+            for action_idx in np.flatnonzero(active_mask):
                 if sol[action_idx] > 1:
-                    bundle = np.zeros(self.num_actions, dtype=bool)
-                    bundle[action_idx] = True
+                    bundle = self._action_masks[action_idx]
                 else:
-                    bundle = self.dep[action_idx].copy()
-                    bundle[action_idx] = True
-                    bundle &= sol > 0
+                    bundle = self.repair_bundle_masks[action_idx] & active_mask
                 units = sol[bundle].astype(np.float64)
                 resource = float(
                     np.sum(self.costs[bundle] * units) / self.budget
@@ -680,7 +703,7 @@ def print_diagnostics(problem: NBAProblem, seed: int = 0, sample_size: int = 200
 
             lowest = min(item[2] for item in candidates)
             tied = [item for item in candidates
-                    if np.isclose(item[2], lowest, rtol=0.0, atol=1e-12)]
+                    if abs(item[2] - lowest) <= 1e-12]
             if rng is None:
                 chosen = min(tied, key=lambda item: item[0])
             else:
