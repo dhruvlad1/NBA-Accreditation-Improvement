@@ -58,6 +58,25 @@ class NSGA2Optimizer:
         self.apply_repair = apply_repair
         self.rng = np.random.default_rng(seed)
 
+    def _initial_population(self) -> List[np.ndarray]:
+        """Create the initial population; subclasses may add opt-in seeds."""
+        pop: List[np.ndarray] = []
+        for _ in range(self.pop_size):
+            sol = self.problem.random_solution(self.rng, repair=self.apply_repair)
+            pop.append(sol)
+        return pop
+
+    def _generation_extra_evaluations(
+        self,
+        pop: List[np.ndarray],
+        eval_results: List[EvaluationResult],
+        archive: ParetoArchive,
+        generation: int,
+        max_extra: int,
+    ) -> List[EvaluationResult]:
+        """Return optional evaluated candidates without changing default NSGA-II."""
+        return []
+
     def run(self) -> OptimizationResult:
         """Execute the NSGA-II search."""
         start_time = time.time()
@@ -65,10 +84,7 @@ class NSGA2Optimizer:
         history: List[Dict[str, Any]] = []
 
         # 1. Initialize population
-        pop: List[np.ndarray] = []
-        for _ in range(self.pop_size):
-            sol = self.problem.random_solution(self.rng, repair=self.apply_repair)
-            pop.append(sol)
+        pop = self._initial_population()
 
         eval_results = self.problem.evaluate_batch(np.array(pop))
         total_evals = len(eval_results)
@@ -104,8 +120,17 @@ class NSGA2Optimizer:
             })
 
             # Offspring generation
+            remaining_generations = self.max_generations - gen - 1
+            budget = self.pop_size * (self.max_generations + 1)
+            max_extra = max(
+                0, min(self.pop_size, budget - total_evals - remaining_generations * self.pop_size)
+            )
+            extra_evals = self._generation_extra_evaluations(
+                pop, eval_results, archive, gen, max_extra
+            )
+            offspring_target = self.pop_size - len(extra_evals)
             offspring_pop: List[np.ndarray] = []
-            while len(offspring_pop) < self.pop_size:
+            while len(offspring_pop) < offspring_target:
                 # Tournament selection
                 p1_idx = binary_tournament_selection(ranks, crowding, self.rng)
                 p2_idx = binary_tournament_selection(ranks, crowding, self.rng)
@@ -130,15 +155,16 @@ class NSGA2Optimizer:
                     c2 = self.problem.repair(c2, self.rng)
 
                 offspring_pop.append(c1)
-                if len(offspring_pop) < self.pop_size:
+                if len(offspring_pop) < offspring_target:
                     offspring_pop.append(c2)
 
             offspring_evals = self.problem.evaluate_batch(np.array(offspring_pop))
+            offspring_evals.extend(extra_evals)
             total_evals += len(offspring_evals)
             archive.add_batch(offspring_evals)
 
             # Combined pool (2N)
-            combined_pop = pop + offspring_pop
+            combined_pop = pop + offspring_pop + [solution.x for solution in extra_evals]
             combined_evals = eval_results + offspring_evals
 
             combined_objs = np.array([res.objectives_min for res in combined_evals], dtype=np.float64)

@@ -124,3 +124,55 @@ class GreedyBaseline:
             history=[],
             total_evaluations=len(all_evals),
         )
+
+
+class GreedyRepaired:
+    """Single repaired greedy plan using marks per unit of cost and hours."""
+
+    def __init__(self, problem: NBAProblem, seed: int = 42) -> None:
+        self.problem = problem
+        self.seed = seed
+        self.rng = np.random.default_rng(seed)
+
+    def run(self, n_samples: int = 100) -> OptimizationResult:
+        start_time = time.time()
+        evaluations: List[EvaluationResult] = []
+        for sample_index in range(n_samples):
+            plan = np.zeros(self.problem.num_actions, dtype=np.int32)
+            ranked = sorted(
+                self.problem.actions,
+                key=lambda action: self.problem.gains[action.index] / (
+                    self.problem.costs[action.index]
+                    + self.problem.hours[action.index] / 100.0
+                    + 0.1
+                ),
+                reverse=True,
+            )
+            for action in ranked:
+                if not action.is_schedulable:
+                    continue
+                plan[action.index] = action.max_units
+                for prerequisite in action.prereq_indices:
+                    plan[prerequisite] = max(plan[prerequisite], 1)
+            if sample_index > 0:
+                for _ in range(5):
+                    action_index = int(self.rng.integers(0, self.problem.num_actions))
+                    plan[action_index] = self.rng.integers(
+                        0, self.problem.upper_bounds[action_index] + 1
+                    )
+            repaired = self.problem.repair(
+                self.problem._legacy_repair(plan, self.rng), self.rng
+            )
+            evaluations.append(self.problem.evaluate(repaired))
+
+        archive = ParetoArchive(max_size=max(1, n_samples))
+        archive.add_batch(evaluations)
+        return OptimizationResult(
+            algorithm_name="Greedy-Repaired",
+            seed=self.seed,
+            elapsed_time=time.time() - start_time,
+            final_population=evaluations,
+            pareto_solutions=archive.get_feasible_solutions(),
+            history=[],
+            total_evaluations=len(evaluations),
+        )
