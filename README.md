@@ -138,7 +138,7 @@ $$
 Prerequisites determine an earliest-start schedule; an action with no prerequisite uses zero in the maximum.
 
 $$
-H_m(x)=\sum_{a\in A:S_a < m \le F_a}\frac{h_a}{d_a}x_a\le K_m
+H_m(x)=\sum_{a\in A:S_a \lt m \le F_a}\frac{h_a}{d_a}x_a\le K_m
 \quad \forall m\in\lbrace 1,\ldots,T \rbrace.
 $$
 
