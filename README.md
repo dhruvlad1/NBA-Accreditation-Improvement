@@ -87,7 +87,7 @@ This chooses a bounded integer plan rather than a fractional action quantity.
 ### Capped criterion scores
 
 $$
-\operatorname{Score}_c(x)=\min\left(M_c,\ s_{0c}+\sum_{a\in A:\operatorname{crit}(a)=c}g_a x_a\right).
+\text{Score}_c(x)=\min\left(M_c,\ s_{0c}+\sum_{a\in A:\text{crit}(a)=c}g_a x_a\right).
 $$
 
 Each criterion stops gaining marks after its working maximum.
@@ -95,7 +95,7 @@ Each criterion stops gaining marks after its working maximum.
 ### Four objectives
 
 $$
-\max f_1(x)=\sum_{c\in C}\operatorname{Score}_c(x).
+\max f_1(x)=\sum_{c\in C}\text{Score}_c(x).
 $$
 
 The first objective maximizes total accreditation marks.
@@ -113,7 +113,7 @@ $$
 The third objective minimizes total faculty effort.
 
 $$
-\max f_4(x)=\min_{c\in C}\frac{\operatorname{Score}_c(x)}{M_c}.
+\max f_4(x)=\min_{c\in C}\frac{\text{Score}_c(x)}{M_c}.
 $$
 
 The fourth objective maximizes the weakest criterion's normalized ratio.
@@ -131,7 +131,7 @@ The selected actions must fit within the 30.0 Lakh INR budget.
 2. **Monthly faculty hours**
 
 $$
-F_a=d_a+\max_{b\in\operatorname{prereq}(a)}F_b,\qquad
+F_a=d_a+\max_{b\in\text{prereq}(a)}F_b,\qquad
 S_a=F_a-d_a.
 $$
 
@@ -139,7 +139,7 @@ Prerequisites determine an earliest-start schedule; an action with no prerequisi
 
 $$
 H_m(x)=\sum_{a\in A:S_a<m\le F_a}\frac{h_a}{d_a}x_a\le K_m
-\quad \forall m\in\{1,\ldots,T\}.
+\quad \forall m\in\lbrace 1,\ldots,T \rbrace.
 $$
 
 Faculty effort is spread across active months and cannot exceed monthly capacity.
@@ -155,7 +155,7 @@ Actions finishing after the 12-month horizon cannot be selected.
 4. **Prerequisites and evidence**
 
 $$
-x_a\le u_a x_b\quad \forall a\in A,\ b\in\operatorname{prereq}(a).
+x_a\le u_a x_b\quad \forall a\in A,\ b\in\text{prereq}(a).
 $$
 
 Selecting a dependent action requires its prerequisite action units; the evidence-package relationships are encoded in the same prerequisite structure.
@@ -163,7 +163,7 @@ Selecting a dependent action requires its prerequisite action units; the evidenc
 5. **Minimum criterion levels**
 
 $$
-\operatorname{Score}_c(x)\ge L_c\quad\forall c\in C.
+\text{Score}_c(x)\ge L_c\quad\forall c\in C.
 $$
 
 Every criterion must meet its configured minimum level.
