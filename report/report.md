@@ -12,7 +12,7 @@
 
 Higher education engineering institutions aiming for National Board of Accreditation (NBA) Tier-I accreditation (aligned with the international Washington Accord) face a complex resource allocation dilemma. Accrediting bodies evaluate institutions across **10 multifaceted criteria** totaling 1,000 marks. Achieving full accreditation (typically $\ge 750$ marks for 5–6 years validity) requires substantial financial investment and extensive faculty person-hours, subject to strict monthly faculty capacity constraints, calendar deadlines, and hierarchical prerequisite structures (e.g., establishing evidence packages and OBE governance before rolling out specialized interventions).
 
-This project designs, implements, benchmarks, and analyzes a constrained, multi-objective combinatorial optimization model for NBA improvement planning. The decision problem selects integer execution units $x_a \in \{0, \dots, u_a\}$ of 45 discrete improvement actions across the 10 criteria. We simultaneously optimize four competing objectives:
+This project designs, implements, benchmarks, and analyzes a constrained, multi-objective combinatorial optimization model for NBA improvement planning. The decision problem selects integer execution units $x_a \in \lbrace 0, \dots, u_a \rbrace$ of 45 discrete improvement actions across the 10 criteria. We simultaneously optimize four competing objectives:
 1. **Total NBA Score ($f_1$, Maximize):** Sum of marks across all 10 criteria.
 2. **Implementation Cost ($f_2$, Minimize):** Total capital and operational expenditure (Lakh INR).
 3. **Faculty Effort ($f_3$, Minimize):** Total cumulative faculty person-hours.
@@ -54,7 +54,7 @@ The department currently stands at **515 marks (51.5%)**, which fails the requir
 ### 1.2 Mathematical Formulation
 
 #### Decision Variables
-Let $x_a \in \{0, 1, \dots, u_a\}$ represent the number of units implemented for action $a \in \{1, \dots, N\}$ (where $N = 45$).
+Let $x_a \in \lbrace 0, 1, \dots, u_a \rbrace$ represent the number of units implemented for action $a \in \lbrace 1, \dots, N \rbrace$ (where $N = 45$).
 Each action has associated cost $q_a$, faculty hours $h_a$, duration $d_a$, score gain $g_a$, and prerequisite set $\text{prereq}(a)$.
 
 #### Criterion Score with Diminishing Returns Satiation
@@ -75,14 +75,14 @@ $$\max f_4(x) = \min_{c=1}^{10} \frac{\text{Score}_c(x)}{M_c} \quad [\text{Balan
    $$F_a = d_a + \max_{b \in \text{prereq}(a)} F_b \quad (\text{with } \max = 0 \text{ if } \text{prereq}(a) = \emptyset)$$
    $$S_a = F_a - d_a$$
    Active units distribute effort uniformly over active months $S_a < m \le F_a$:
-   $$H_m(x) = \sum_{a: S_a < m \le F_a} \frac{h_a}{d_a} \cdot x_a \le K_m = 300.0 \text{ hrs/month} \quad \forall m \in \{1, \dots, 12\}$$
+   $$H_m(x) = \sum_{a: S_a < m \le F_a} \frac{h_a}{d_a} \cdot x_a \le K_m = 300.0 \text{ hrs/month} \quad \forall m \in \lbrace 1, \dots, 12 \rbrace$$
 3. **Planning Horizon / Deadlines:**
    $$x_a = 0 \quad \forall a \text{ where } F_a > T = 12 \text{ months}$$
 4. **Prerequisite Dependencies & Evidence Packages:**
    Each criterion has a core Evidence Package ($E_1 \dots E_{10}$) required by dependent actions:
    $$x_a \le u_a \cdot x_b \quad \forall b \in \text{prereq}(a)$$
 5. **Minimum Criterion Floors:**
-   $$\text{Score}_c(x) \ge L_c \quad \forall c \in \{1, \dots, 10\}$$
+   $$\text{Score}_c(x) \ge L_c \quad \forall c \in \lbrace 1, \dots, 10 \rbrace$$
 6. **Accreditation Qualification Target:**
    $$f_1(x) \ge R = 750.0 \text{ Marks}$$
 
@@ -95,9 +95,9 @@ All algorithms and operators are written from scratch (with pymoo strictly utili
 ### 2.1 Exact Mathematical Programming (HiGHS MILP)
 We linearize the non-linear objective functions:
 - Let continuous variables $y_c \in [L_c, M_c]$ represent $\text{Score}_c$, with linear constraints:
-  $$y_c - \sum_{a \in c} g_a x_a \le s0_c \quad \forall c \in \{1, \dots, 10\}$$
+  $$y_c - \sum_{a \in c} g_a x_a \le s0_c \quad \forall c \in \lbrace 1, \dots, 10 \rbrace$$
 - Let continuous variable $z \in [0, 1]$ represent $f_4$, with linear constraints:
-  $$z - \frac{1}{M_c} y_c \le 0 \quad \forall c \in \{1, \dots, 10\}$$
+  $$z - \frac{1}{M_c} y_c \le 0 \quad \forall c \in \lbrace 1, \dots, 10 \rbrace$$
 We solve this exact model via `scipy.optimize.milp` using the state-of-the-art HiGHS simplex/interior-point branch-and-cut solver. By sweeping $\epsilon_2 \in [10, 30]$ (budget) and $\epsilon_3 \in [400, 1600]$ (hours) using the $\epsilon$-constraint method, HiGHS provides the exact mathematical reference front.
 
 ### 2.2 NSGA-II (Deb et al., 2002)
@@ -110,7 +110,7 @@ We solve this exact model via `scipy.optimize.milp` using the state-of-the-art H
 - **Environmental Selection:** $(\mu + \lambda)$ elitist truncation based on non-dominated fronts and crowding distance.
 
 ### 2.3 SPEA2 (Zitzler et al., 2001)
-- Computes dominance strength $S(i) = |\{j \mid i \succ j\}|$ and raw fitness $R(i) = \sum_{j \succ i} S(j)$.
+- Computes dominance strength $S(i) = |\lbrace j \mid i \succ j \rbrace|$ and raw fitness $R(i) = \sum_{j \succ i} S(j)$.
 - Adds $k$-th nearest neighbor Euclidean density estimation in normalized 4D objective space.
 - Employs an iterative truncation operator that preserves extreme boundary points while pruning overcrowded clusters.
 
