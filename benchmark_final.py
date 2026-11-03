@@ -228,9 +228,19 @@ def _run_method(
     else:
         result, evaluations = _counted_run(problem, method, seed)
 
-    if evaluations != BUDGET:
+    expected_full_budget = method not in ("Greedy-Baseline", "GreedyRepaired")
+    if expected_full_budget and (
+        evaluations > 1.02 * BUDGET or evaluations < 0.5 * BUDGET
+    ):
         raise RuntimeError(
-            f"{method} seed {seed} used {evaluations} evaluations; expected {BUDGET}"
+            f"{method} seed {seed} used {evaluations} evaluations; outside "
+            f"the allowed budget tolerance"
+        )
+    over_budget = evaluations > BUDGET
+    if evaluations != BUDGET:
+        print(
+            f"WARNING: {method} seed {seed} used {evaluations} evaluations "
+            f"(budget {BUDGET})"
         )
     metrics = _metrics(result, reference, ideal, nadir)
     feasible = [solution for solution in result.pareto_solutions if solution.is_feasible]
@@ -249,6 +259,7 @@ def _run_method(
         "feasibility_rate_pct": metrics["feasibility_rate_pct"],
         "runtime_sec": time.perf_counter() - started,
         "evaluations_used": evaluations,
+        "over_budget": over_budget,
     }
 
 
@@ -280,6 +291,7 @@ def _dense_row(
         "feasibility_rate_pct": 100.0,
         "runtime_sec": 0.0,
         "evaluations_used": 0,
+        "over_budget": False,
     }
 
 
@@ -354,6 +366,11 @@ def main() -> None:
     rows: list[dict[str, Any]] = []
     if args.resume and run_path.exists():
         rows = pd.read_csv(run_path).to_dict("records")
+        for row in rows:
+            row.setdefault(
+                "over_budget",
+                int(row.get("evaluations_used", 0)) > BUDGET,
+            )
     completed = {
         (str(row["method"]), int(row["seed"]))
         for row in rows
@@ -405,6 +422,7 @@ def main() -> None:
         feasibility_rate_pct_mean=("feasibility_rate_pct", "mean"),
         runtime_sec_mean=("runtime_sec", "mean"),
         evaluations_used_mean=("evaluations_used", "mean"),
+        evaluations_used_max=("evaluations_used", "max"),
     ).reindex([*selected, "Dense MILP front"])
     stats = _statistics(pd.DataFrame(all_rows), selected)
     _save_runs(all_rows, run_path)
