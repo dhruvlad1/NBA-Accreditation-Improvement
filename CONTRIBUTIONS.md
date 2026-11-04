@@ -8,12 +8,12 @@ Generated on 2026-11-04 from HEAD `1b376bd` (`1b376bdd54c70dd3c65838f4eccfa83484
 
 | GitHub user | Role | Non-merge commits | Merge commits | Lines added / removed* | Active dates | Main areas |
 |---|---|---:|---:|---:|---|---|
-| [Tirth-1612](https://github.com/dhruvlad1/NBA-Accreditation-Improvement) | Core architecture and algorithms | 8 | 0 | 4,513 / 0 | 2026-10-23 | formulation, algorithms, metrics, tests, visualization |
-| [RishitModi](https://github.com/dhruvlad1/NBA-Accreditation-Improvement) | Data engineering and validation | 5 | 2 | 951 / 268 | 2026-10-24 | datasets, repair hardening, brute-force validation |
-| [kavish310107](https://github.com/dhruvlad1/NBA-Accreditation-Improvement) | Frontend and decision support | 3 | 0 | 1,795 / 299 | 2026-10-28 | Streamlit, Plotly, configuration fixes |
-| [dhruvlad1](https://github.com/dhruvlad1/NBA-Accreditation-Improvement) | Optimization, benchmarking, evaluation and release | 18 | 3 | 3,043 / 301 | 2026-11-02 to 2026-11-04 | benchmarks, profiling, references, statistics, documentation |
+| [Tirth-1612](https://github.com/Tirth-1612) | Core architecture and algorithms | 8 | 0 | 4,513 / 0 | 2026-10-23 | formulation, algorithms, metrics, tests, visualization |
+| [RishitModi](https://github.com/RishitModi) | Data engineering and validation | 5 | 2 | 951 / 268 | 2026-10-24 | datasets, repair hardening, brute-force validation |
+| [kavish310107](https://github.com/kavish310107) | Frontend and decision support | 3 | 0 | 1,795 / 299 | 2026-10-28 | Streamlit, Plotly, configuration fixes |
+| [dhruvlad1](https://github.com/dhruvlad1) | Optimization, benchmarking, evaluation and release | 18 | 3 | 3,043 / 301 | 2026-11-02 to 2026-11-04 | benchmarks, profiling, references, statistics, documentation |
 
-\* `Dhruv` and `Dhruv Lad` are the same person, and `kavish310107` and `Kavish Desai` are the same person. Counts are for commits reachable from `HEAD`; `git shortlog -sne --all` also sees six agent checkpoint refs outside the project history and therefore reports extra commits.
+\* `Dhruv` and `Dhruv Lad` are the same person, and `kavish310107` and `Kavish Desai` are the same person. Counts are for commits reachable from `HEAD` on `main`.
 
 ## Project phases
 
